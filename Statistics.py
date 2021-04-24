@@ -1,4 +1,5 @@
 from keras import backend as K
+import tensorflow as tf
 import numpy as np
 
 def TP(y_true, y_pred):
@@ -99,9 +100,8 @@ def EML(y_true, y_pred):
     y_pred = K.flatten(y_pred)
     intersection = K.sum(y_true*y_pred)
     dice_loss = (2.*intersection + smooth)/(K.sum(y_true*y_true)+K.sum(y_pred * y_pred)+smooth)
-    y_pred = K.clip(y_pred, K.epsilon())
+    y_pred = K.clip(y_pred, K.epsilon(), 1)#to be discussed
     pt_1 = tf.where(tf.equal(y_true, 1),y_pred,tf.ones_like(y_pred))
     pt_0 = tf.where(tf.equal(y_true, 0),y_pred,tf.zeros_like(y_pred))
-    focal_loss = -K.mean(alpha*K.pow(1. -pt_1, gamma)*K.log(pt_1),axis=-1)\
-                   -K.mean(1-alpha)*K.pow(pt_0,gamma)*K.log(1. -pt_0),axis=-1)
+    focal_loss = -K.mean(alpha*K.pow(1. -pt_1, gamma)*K.log(pt_1),axis=-1)-K.mean((1-alpha)*K.pow(pt_0,gamma)*K.log(1. -pt_0),axis=-1)
     return focal_loss - K.log(dice_loss)

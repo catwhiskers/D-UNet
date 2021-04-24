@@ -6,7 +6,7 @@ from Statistics import *
 
 if __name__ == "__main__":
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
     path_h5_save = './h5/'
     output_path = './model/'
     dataset_name = '0.8'
@@ -33,13 +33,16 @@ if __name__ == "__main__":
         print('no loading weight!')
 
     if mode == 'train':
-        h5 = h5py.File('/home/siat/data/train')
-        original = h5['data']
-        label = h5['label']
+        h5 = h5py.File('./h5/train')
+        print([k for k in h5.keys()])
+        original = h5['data_val']
+        label = h5['label_val']
         # label = h5['label_change']
-        h5 = h5py.File('/home/siat/data/test')
-        original_val = h5['data_val']
-        label_val = h5['label_val']
+        h5 = h5py.File('./h5/test_0.8')
+        print(h5)
+        print([key for key in h5.keys()])
+        original_val = h5['data']
+        label_val = h5['label']
         # label_val = h5['label_val_change']
 
 
@@ -61,11 +64,11 @@ if __name__ == "__main__":
         train_datagen_label = ImageDataGenerator(**data_gen_args)
         validation_datagen = ImageDataGenerator(**data_gen_args_validation)
         validation_datagen_label = ImageDataGenerator(**data_gen_args_validation)
-
+        #image_generator = train_datagen.flow((np.expand_dims(original, axis=3)), batch_size=batch_size, seed=1)
         image_generator = train_datagen.flow(original, batch_size=batch_size, seed=1)
         mask_generator = train_datagen_label.flow(label, batch_size=batch_size, seed=1)
-        image_generator_val = validation_datagen.flow(original_val, batch_size=batch_size, seed=1)
-        mask_generator_val = validation_datagen_label.flow(label_val, batch_size=batch_size, seed=1)
+        image_generator_val = validation_datagen.flow(original, batch_size=batch_size, seed=1)
+        mask_generator_val = validation_datagen_label.flow(label, batch_size=batch_size, seed=1)
 
         train_generator = zip(image_generator, mask_generator)
         validation_generator = zip(image_generator_val, mask_generator_val)

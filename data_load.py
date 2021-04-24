@@ -18,7 +18,7 @@ def nii_to_h5(path_nii,path_save,ratio=0.8):
     ori_min = 10000
     ori_max = 0
     for dir_num, dir_site in enumerate(list_site):
-        if dir_site[-3:] == 'csv':
+        if dir_site[-3:] == 'csv' or  dir_site[-3:] == '.gz':
             continue
 
         list_patients = os.listdir(path_nii+'/'+dir_site)
@@ -118,6 +118,8 @@ def data_adjust(max, min, h5_path, ratio=0.8):
 
 def load_h5(path_h5, shuffle=False, size=None, test_programme=None, only=False):
     h5 = h5py.File(path_h5)
+    print(path_h5)
+    print([x for x in h5.keys()])
     data = h5['data'][:]
     label = h5['label'][:]
 
@@ -213,7 +215,7 @@ if __name__ == "__main__":
 
     print('loading training-data...')
     time_start = time.time()
-    original, label = load_h5(path_save + 'train_' + str(ratio), size=(img_size[1], img_size[0]),
+    original, label = load_h5(path_save + '/train_' + str(ratio), size=(img_size[1], img_size[0]),
                               test_programme = None)
     file = h5py.File(path_save+'/train', 'w')
     original = data_toxn(original, 4)
@@ -234,7 +236,7 @@ if __name__ == "__main__":
 
     print('training_data done!, using:', str(time.time() - time_start) + 's\n\nloading validation-data...')
     time_start = time.time()
-    original_val, label_val = load_h5(path_save + 'test_' + str(ratio), size=(img_size[1], img_size[0]))
+    original_val, label_val = load_h5(path_save + '/test_' + str(ratio), size=(img_size[1], img_size[0]))
     file = h5py.File(path_save+'/train', 'w')
     original_val = data_toxn(original_val, 4)
     file.create_dataset('data_val', data=original_val)
