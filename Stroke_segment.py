@@ -11,7 +11,8 @@ if __name__ == "__main__":
     output_path = './model/'
     dataset_name = '0.8'
     load_weight = ''
-    mode = 'train'  # use 'train' or 'detect'
+    #mode = 'train'  # use 'train' or 'detect'
+    mode = 'detect'  # use 'train' or 'detect'
     img_size = [192, 192]
     batch_size = 36
     lr = 1e-4
@@ -79,13 +80,13 @@ if __name__ == "__main__":
 
     elif mode == 'detect':
         print('loading testing-data...')
-        h5 = h5py.File('./h5/x4/test')
+        h5 = h5py.File('./h5/train')
         original = h5['data_val']
         label = h5['label_val']
         # label_val_change = h5['label_val_change']
         print('load data done!')
 
-        model.compile(optimizer=Adam(lr=lr), loss=dice_coef_loss, metrics=[TP, TN, FP, FN, dice_coef])
+        model.compile(optimizer=Adam(lr=lr), loss=EML, metrics=[TP, TN, FP, FN, dice_coef])
 
         dice_list = []
         recall_list = []
@@ -123,9 +124,6 @@ if __name__ == "__main__":
                                            'precision_mean: ' + str(np.mean(precision_list)) + ' precision_std:' + str(
             np.std(precision_list, ddof=1)) + '\n')
 
-        #np.save('/root/桌面/paper材料/box/' + h5_name, dice_list)
-        # plt.boxplot(dice_list)
-        # plt.show()
 
         #'''
         tim = time.time()

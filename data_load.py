@@ -9,6 +9,10 @@ from matplotlib import pyplot as plt
 from PIL import Image
 import time
 
+# Input the folder contains nii files (ATLAS_R1.1) 
+# This function will iterate the files 
+# and combines the MRI result and labeling result into training & testing sets 
+
 def nii_to_h5(path_nii,path_save,ratio=0.8):
     data = []
     label = []
@@ -17,13 +21,15 @@ def nii_to_h5(path_nii,path_save,ratio=0.8):
     list_data = []
     ori_min = 10000
     ori_max = 0
+    
+    # iterate the folder  
     for dir_num, dir_site in enumerate(list_site):
         if dir_site[-3:] == 'csv' or  dir_site[-3:] == '.gz':
             continue
 
         list_patients = os.listdir(path_nii+'/'+dir_site)
         for dir_patients in list_patients:
-            for t0n in ['/t01/', '/t02/']:
+            for t0n in ['/t01/', '/t02/']: #same patient but scanned in different time points 
                 try:
                     location = path_nii+'/' + dir_site + '/' + dir_patients + t0n
                     location_all = os.listdir(location)
@@ -33,10 +39,11 @@ def nii_to_h5(path_nii,path_save,ratio=0.8):
                 except:
                     continue
 
-    random.shuffle(list_data)
+    random.shuffle(list_data) # shuffle the dataset to get a more generalized training results 
+    
     for num, data_dir in enumerate(list_data):
         for i, deface in enumerate(data_dir):
-            if deface.find('deface') != -1:
+            if deface.find('deface') != -1: # the MRI scann result 
                 ori = nib.load(deface)
                 ori = ori.get_fdata() #array data of 3d images
                 ori = np.array(ori)
@@ -45,13 +52,13 @@ def nii_to_h5(path_nii,path_save,ratio=0.8):
                     ori_max = ori.max()
                 if ori_min > ori.min():
                     ori_min = ori.min()
-                del list_data[num][i]
+                del list_data[num][i] # remove MRI from datastructure 
                 break
 
         label_merge = np.zeros_like(ori)
-        for i, dir_data in enumerate(list_data[num]):
+        for i, dir_data in enumerate(list_data[num]): #after MRI results are removed, we can iterate over labeling results
             img = nib.load(dir_data)
-            img = np.array(img.get_fdata())
+            img = np.array(img.get_fdata()) #segmentation label data 
             img = img.transpose((2, 1, 0))
             label_merge = label_merge + img
         
@@ -86,9 +93,10 @@ def nii_to_h5(path_nii,path_save,ratio=0.8):
             file.close()
             print('Finished!')
     return ori_max, ori_min
-            #'''
 
-def data_adjust(max, min, h5_path, ratio=0.8):
+
+# image normalization, save it under detection folder 
+def data_adjust(max, min, h5_path, ratio=0.8): 
 
     file = h5py.File(h5_path + '/test_' + str(ratio))
     data = file['data']
@@ -115,6 +123,17 @@ def data_adjust(max, min, h5_path, ratio=0.8):
     file_adjust.create_dataset('label', data=label)
     file.close()
     file_adjust.close()
+    
+def plot_results(data_output, label_output):    
+    for i in range(10):
+        plt.subplot(1,2,1)
+        plt.imshow(data_output[i],cmap='gray')
+        plt.subplot(1,2,2)
+        plt.imshow(label_output[i],cmap='gray')
+        plt.pause(0.1)
+        print(data_output[i].max(),data_output[i].min(),label_output[i].max(),label_output[i].min())    
+        plt.savefig("MRI-{}.png".format(str(i)))
+    
 
 def load_h5(path_h5, shuffle=False, size=None, test_programme=None, only=False):
     h5 = h5py.File(path_h5)
@@ -178,26 +197,20 @@ def load_h5(path_h5, shuffle=False, size=None, test_programme=None, only=False):
     else:
         data_output = data
         label_output = label
-    # for i in range(500):
-    #     plt.subplot(1,2,1)
-    #     plt.imshow(data_output[i],cmap='gray')
-    #     plt.subplot(1,2,2)
-    #     plt.imshow(label_output[i],cmap='gray')
-    #     plt.pause(0.1)
-    #     print(data_output[i].max(),data_output[i].min(),label_output[i].max(),label_output[i].min())
-
+        
+    plot_results(data_output, label_output)
     return data_output, label_output
 
 def data_toxn(data, z):
     data_xn = np.zeros((data.shape[0], data.shape[1], data.shape[2], z))
     for patient in range(int(len(data) / 189)): #189 images per patient
         for i in range(189):
-            for j in range(z):#forward looking for 4 images 
+            for j in range(z):#sliding window for consecutive 4 images j = 0, 1, 2, 3 and j - z//2 = -2, 1, 0, 1 
                 if i + j - z // 2 >= 0 and i + j - z // 2 < 189:
                     data_xn[patient * 189 + i, :, :, j] = data[patient * 189 + i + j - z // 2]
                     print(i, i + j - z // 2)
                 else:
-                    data_xn[patient * 189 + i, :, :, j] = np.zeros_like(data[0])
+                    data_xn[patient * 189 + i, :, :, j] = np.zeros_like(data[0]) #handling boundary 
     return data_xn
 
 
@@ -220,14 +233,14 @@ if __name__ == "__main__":
     file = h5py.File(path_save+'/train', 'w')
     original = data_toxn(original, 4)
     file.create_dataset('data', data=original)
-    original = original.transpose((0, 3, 1, 2))
-    original = np.expand_dims(original, axis=-1)
-    file.create_dataset('data_lstm', data=original)
-    del original
+#     original = original.transpose((0, 3, 1, 2))
+#     original = np.expand_dims(original, axis=-1)
+#     file.create_dataset('data_lstm', data=original)
+#     del original
 
-    label_change = data_toxn(label, 4)
-    file.create_dataset('label_change', data=label_change)
-    del label_change
+#     label_change = data_toxn(label, 4)
+#     file.create_dataset('label_change', data=label_change)
+#     del label_change
 
     label = np.expand_dims(label, axis=-1)
     file.create_dataset('label', data=label)
@@ -236,19 +249,19 @@ if __name__ == "__main__":
 
     print('training_data done!, using:', str(time.time() - time_start) + 's\n\nloading validation-data...')
     time_start = time.time()
-    original_val, label_val = load_h5(path_save + '/test_' + str(ratio), size=(img_size[1], img_size[0]))
+    original_val, label_val = load_h5(path_save + '/test_' + str(ratio), size=(img_size[1], img_size[0])) # for this workshop, we put test data as training data to save some time 
     file = h5py.File(path_save+'/train', 'w')
     original_val = data_toxn(original_val, 4)
     file.create_dataset('data_val', data=original_val)
 
-    original_val = original_val.transpose((0, 3, 1, 2))
-    original_val = np.expand_dims(original_val, axis=-1)
-    file.create_dataset('data_val_lstm', data=original_val)
-    del original_val
+#     original_val = original_val.transpose((0, 3, 1, 2))
+#     original_val = np.expand_dims(original_val, axis=-1)
+#     file.create_dataset('data_val_lstm', data=original_val)
+#     del original_val
 
-    label_val_change = data_toxn(label_val, 4)
-    file.create_dataset('label_val_change', data=label_val_change)
-    del label_val_change
+#     label_val_change = data_toxn(label_val, 4)
+#     file.create_dataset('label_val_change', data=label_val_change)
+#     del label_val_change
 
     label_val = np.expand_dims(label_val, axis=-1)
     file.create_dataset('label_val', data=label_val)
