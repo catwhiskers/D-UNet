@@ -38,7 +38,7 @@ def nii_to_h5(path_nii,path_save,ratio=0.8):
         for i, deface in enumerate(data_dir):
             if deface.find('deface') != -1:
                 ori = nib.load(deface)
-                ori = ori.get_fdata()
+                ori = ori.get_fdata() #array data of 3d images
                 ori = np.array(ori)
                 ori = ori.transpose((2, 1, 0))
                 if ori_max < ori.max():
@@ -190,9 +190,9 @@ def load_h5(path_h5, shuffle=False, size=None, test_programme=None, only=False):
 
 def data_toxn(data, z):
     data_xn = np.zeros((data.shape[0], data.shape[1], data.shape[2], z))
-    for patient in range(int(len(data) / 189)):
+    for patient in range(int(len(data) / 189)): #189 images per patient
         for i in range(189):
-            for j in range(z):
+            for j in range(z):#forward looking for 4 images 
                 if i + j - z // 2 >= 0 and i + j - z // 2 < 189:
                     data_xn[patient * 189 + i, :, :, j] = data[patient * 189 + i + j - z // 2]
                     print(i, i + j - z // 2)
