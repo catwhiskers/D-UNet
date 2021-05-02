@@ -7,12 +7,11 @@ from Statistics import *
 if __name__ == "__main__":
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
-    path_h5_save = './h5/'
-    output_path = './model/'
+    output_path = '/opt/ml/model/'
     dataset_name = '0.8'
     load_weight = ''
-    #mode = 'train'  # use 'train' or 'detect'
-    mode = 'detect'  # use 'train' or 'detect'
+    mode = 'train'  # use 'train' or 'detect'
+    #mode = 'detect'  # use 'train' or 'detect'
     img_size = [192, 192]
     batch_size = 36
     lr = 1e-4
@@ -34,12 +33,12 @@ if __name__ == "__main__":
         print('no loading weight!')
 
     if mode == 'train':
-        h5 = h5py.File('./h5/train')
+        h5 = h5py.File('/opt/ml/input/data/atlas/h5/train')
         print([k for k in h5.keys()])
         original = h5['data_val']
         label = h5['label_val']
         # label = h5['label_change']
-        h5 = h5py.File('./h5/test_0.8')
+        h5 = h5py.File('/opt/ml/input/data/atlas/h5/test_0.8')
         print(h5)
         print([key for key in h5.keys()])
         original_val = h5['data']
@@ -80,7 +79,7 @@ if __name__ == "__main__":
 
     elif mode == 'detect':
         print('loading testing-data...')
-        h5 = h5py.File('./h5/train')
+        h5 = h5py.File('/opt/ml/input/data/atlas/h5/train')
         original = h5['data_val']
         label = h5['label_val']
         # label_val_change = h5['label_val_change']
