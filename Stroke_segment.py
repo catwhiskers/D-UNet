@@ -1,21 +1,43 @@
 import numpy as np
 import os
+import sys
+
 from model import *
 from Statistics import *
 
 
 if __name__ == "__main__":
+    print(sys.argv)
+    if len(sys.argv) < 3:
+        print("please give env and mode options as arguments")
+        exit() 
+        
+    env = sys.argv[1]
+    if env =='local': 
+        from config import config 
+    elif env =='sagemaker': 
+        from config_sm import config 
+    else: 
+        print('please specify env as one of "local" or "sagemaker" as the first argument')
+        exit() 
+        
+        
+    mode = sys.argv[2]    
+    if mode != 'train' and mode != 'detect': 
+        print('please specify env as one of "train" or "detect" as the first argument')
+        exit()
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
-    output_path = '/opt/ml/model/'
+    
+    
+    os.environ["CUDA_VISIBLE_DEVICES"] = config['cuda_visible_devices']
+    output_path = '{}/model/'.format(config['root'])
     dataset_name = '0.8'
     load_weight = ''
-    mode = 'train'  # use 'train' or 'detect'
-    #mode = 'detect'  # use 'train' or 'detect'
+
     img_size = [192, 192]
     batch_size = 36
     lr = 1e-4
-    gpu_used = 2
+    gpu_used = config['gpu_used']
 
     model = D_Unet()
     h5_name = 'DUnet'
@@ -33,12 +55,12 @@ if __name__ == "__main__":
         print('no loading weight!')
 
     if mode == 'train':
-        h5 = h5py.File('/opt/ml/input/data/atlas/h5/train')
+        h5 = h5py.File('{}/h5/train'.format(config['data_root']))
         print([k for k in h5.keys()])
         original = h5['data_val']
         label = h5['label_val']
         # label = h5['label_change']
-        h5 = h5py.File('/opt/ml/input/data/atlas/h5/test_0.8')
+        h5 = h5py.File('{}/h5/test_0.8'.format(config['data_root']))
         print(h5)
         print([key for key in h5.keys()])
         original_val = h5['data']
@@ -57,14 +79,13 @@ if __name__ == "__main__":
                              horizontal_flip=True, featurewise_center=True, featurewise_std_normalization=True)
         data_gen_args_validation = dict(featurewise_center=True, featurewise_std_normalization=True)
 
-        #data_gen_args = dict()
-        #data_gen_args_validation = dict()
 
         train_datagen = ImageDataGenerator(**data_gen_args)
         train_datagen_label = ImageDataGenerator(**data_gen_args)
+
         validation_datagen = ImageDataGenerator(**data_gen_args_validation)
         validation_datagen_label = ImageDataGenerator(**data_gen_args_validation)
-        #image_generator = train_datagen.flow((np.expand_dims(original, axis=3)), batch_size=batch_size, seed=1)
+
         image_generator = train_datagen.flow(original, batch_size=batch_size, seed=1)
         mask_generator = train_datagen_label.flow(label, batch_size=batch_size, seed=1)
         image_generator_val = validation_datagen.flow(original, batch_size=batch_size, seed=1)
@@ -79,7 +100,7 @@ if __name__ == "__main__":
 
     elif mode == 'detect':
         print('loading testing-data...')
-        h5 = h5py.File('/opt/ml/input/data/atlas/h5/train')
+        h5 = h5py.File('{}/h5/train'.format(config['data_root']))
         original = h5['data_val']
         label = h5['label_val']
         # label_val_change = h5['label_val_change']
