@@ -45,7 +45,8 @@ if __name__ == "__main__":
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     model.summary()
-    model = multi_gpu_model(model, gpus=gpu_used)
+    if gpu_used > 1:
+        model = multi_gpu_model(model, gpus=gpu_used)
     model.compile(optimizer=SGD(lr=lr), loss=EML, metrics=[dice_coef])
 
     if load_weight != '':
